@@ -89,4 +89,16 @@ struct Utils {
         
         return lines.joined(separator: "")
     }
+    
+    static func pemToASN1(key: String) -> Data? {
+        let base64 = key
+            .split(separator: "\n")
+            .map({String($0)})
+            .filter({ $0.hasPrefix("-----") == false })
+            .joined(separator: "")
+        guard let asn1 = Data(base64Encoded: base64) else {
+            return nil
+        }
+        return asn1
+    }
 }

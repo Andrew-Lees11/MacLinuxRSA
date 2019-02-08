@@ -35,22 +35,32 @@ FPqri0cb2JZfXJ/DgYSF6vUpwmJG8wVQZKjeGcjDOL5UlsuusFncCzWBQ7RKNUSesmQRMSGkVb1/
         guard let secEncrypted = secPubKey.encrypt("Hello".data(using: .utf8)!) else {
             return XCTFail()
         }
+        print(secEncrypted.count)
         guard let openSSLEncrypted = openSSLPubKey.encrypt("Hello".data(using: .utf8)!) else {
             return XCTFail()
         }
-        guard let _ = secPrivkey.decrypt(secEncrypted) else {
+        guard let noIVEncrypted = openSSLPubKey.encryptNoIV("Hello".data(using: .utf8)!) else {
             return XCTFail()
         }
-        guard let _ = openSSLPrivKey.decrypt(openSSLEncrypted) else {
-            return XCTFail()
-        }
-        let secToOpenSSL = openSSLPrivKey.decrypt(secEncrypted)
-        let openSSLToSec = secPrivkey.decrypt(openSSLEncrypted)
+        print("noIVEncrypted: \(noIVEncrypted), secEncrypted: \(secEncrypted)")
+        print("noIVEncryptedcount: \(noIVEncrypted.count), secEncryptedcount: \(secEncrypted.count)")
+
+//        guard let _ = secPrivkey.decrypt(secEncrypted) else {
+//            return XCTFail()
+//        }
+//        guard let _ = openSSLPrivKey.decrypt(openSSLEncrypted) else {
+//            return XCTFail()
+//        }
+        let openSSLNoIV = openSSLPrivKey.decryptNoIV(noIVEncrypted)
+//        let secToOpenSSL = openSSLPrivKey.decrypt(secEncrypted)
+//        let openSSLToSec = secPrivkey.decrypt(openSSLEncrypted)
         let noIV = openSSLPrivKey.decryptNoIV(secEncrypted)
-        print("secToOpenSSL: \(secToOpenSSL)")
-        print("openSSLToSec: \(openSSLToSec)")
+        let secNoIV = secPrivkey.decrypt(noIVEncrypted)
+        print("openSSLNoIV: \(openSSLNoIV)")
+//        print("secToOpenSSL: \(secToOpenSSL)")
+//        print("openSSLToSec: \(openSSLToSec)")
         print("noIV: \(noIV)")
-        
+        print("secNoIV: \(secNoIV)")
     }
 
     static var allTests = [
