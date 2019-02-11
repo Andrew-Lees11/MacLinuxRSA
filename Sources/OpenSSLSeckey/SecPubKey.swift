@@ -26,7 +26,7 @@ struct SecPubKey {
     func encrypt(_ data: Data) -> Data? {
         var response: Unmanaged<CFError>? = nil
         guard let eData = SecKeyCreateEncryptedData(nativeKey,
-                                                    SecKeyAlgorithm.rsaEncryptionOAEPSHA256AESGCM,
+                                                    SecKeyAlgorithm.rsaEncryptionOAEPSHA1AESGCM,
                                                     data as CFData,
                                                     &response)
             else {

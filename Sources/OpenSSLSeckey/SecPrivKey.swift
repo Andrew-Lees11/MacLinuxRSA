@@ -27,20 +27,15 @@ struct SecPrivKey {
     func decrypt(_ data: Data) -> Data? {
         var response: Unmanaged<CFError>? = nil
         guard let pData = SecKeyCreateDecryptedData(nativeKey,
-                                                    SecKeyAlgorithm.rsaEncryptionOAEPSHA256AESGCM,
+                                                    SecKeyAlgorithm.rsaEncryptionOAEPSHA1AESGCM,
                                                     data as CFData,
                                                     &response) else {
-            return nil
-        }
-        if response != nil {
-            
             guard let error = response?.takeRetainedValue() else {
                 return nil
             }
             print(error)
             return nil
-        }
-        
+        }        
         return (pData as Data)
     }
 }

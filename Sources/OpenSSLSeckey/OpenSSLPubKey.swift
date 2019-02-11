@@ -171,4 +171,100 @@ struct OpenSSLPubKey {
         print("ekFinal: \(ekFinal.count), cipher: \(cipher.count), tagFinal: \(tagFinal.count)")
         return ekFinal + cipher + tagFinal
     }
+    
+//    func encryptParts(_ data: Data) -> Data? {
+//        var evp_key = EVP_PKEY_new()
+//        EVP_PKEY_set1_RSA(evp_key, nativeKey)
+//        let rsaEncryptCtx = EVP_CIPHER_CTX_new_wrapper()
+//        let aeskey = UnsafeMutablePointer<UInt8>.allocate(capacity: 16)
+//        var iv = [UInt8](repeating: 0, count: 16)
+//        let encryptedKey = UnsafeMutablePointer<UInt8>.allocate(capacity: 128)
+//        var encKeyLength: Int32 = 0
+//        let tag = UnsafeMutablePointer<UInt8>.allocate(capacity: 16)
+//        let encrypted = UnsafeMutablePointer<UInt8>.allocate(capacity: data.count + 16)
+//
+//        // Initialize the AES encryption key array (of size 1)
+//        typealias UInt8Ptr = UnsafeMutablePointer<UInt8>?
+//        var ek: UInt8Ptr
+//        ek = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(EVP_PKEY_size(evp_key)))
+//        let ekPtr = UnsafeMutablePointer<UInt8Ptr>.allocate(capacity: MemoryLayout<UInt8Ptr>.size)
+//        ekPtr.pointee = ek
+//
+//        defer {
+//            EVP_CIPHER_CTX_reset_wrapper(rsaEncryptCtx)
+//            EVP_CIPHER_CTX_free_wrapper(rsaEncryptCtx)
+//            aeskey.deallocate()
+//            encryptedKey.deallocate()
+//            tag.deallocate()
+//            encrypted.deallocate()
+//        }
+//        print(EVP_SealInit(rsaEncryptCtx, EVP_aes_128_gcm(), ekPtr, &encKeyLength, &iv, &evp_key, 1))
+//        EVP_CIPHER_CTX_set_padding(rsaEncryptCtx, RSA_PKCS1_OAEP_PADDING)
+//        print(EVP_CIPHER_CTX_ctrl(rsaEncryptCtx, EVP_CTRL_GCM_SET_IVLEN, 16, nil))
+//        print(EVP_EncryptInit_ex(rsaEncryptCtx, nil, nil, nil, iv))
+//        var processedLength: Int32 = 0
+//        var encLength: Int32 = 0
+//
+//        // EVP_SealUpdate is a complex macros and therefore the compiler doesnt
+//        // convert it directly to swift. From /usr/local/opt/openssl/include/openssl/evp.h:
+//        print(data.withUnsafeBytes({ (plaintext: UnsafePointer<UInt8>) -> Int32 in
+//            return EVP_EncryptUpdate(rsaEncryptCtx, encrypted, &processedLength, plaintext, Int32(data.count))
+//        }))
+//        encLength += processedLength
+//
+//        print(EVP_SealFinal(rsaEncryptCtx, encrypted.advanced(by: Int(encLength)), &processedLength))
+//        encLength += processedLength
+//        print(EVP_CIPHER_CTX_ctrl(rsaEncryptCtx, EVP_CTRL_GCM_GET_TAG, 16, tag))
+//        let ekFinal = Data(bytes: encryptedKey, count: 128)
+//        let cipher = Data(bytes: encrypted, count: Int(encLength))
+//        let tagFinal = Data(bytes: tag, count: 16)
+//
+//        print("ekFinal: \(ekFinal.count), cipher: \(cipher.count), tagFinal: \(tagFinal.count)")
+//        return ekFinal + cipher + tagFinal
+//    }
+    
+    func encryptParts(_ data: Data) -> Data? {
+        let rsaEncryptCtx = EVP_CIPHER_CTX_new_wrapper()
+        let aeskey = UnsafeMutablePointer<UInt8>.allocate(capacity: 16)
+        let iv = [UInt8](repeating: 0, count: 16)
+        let encryptedKey = UnsafeMutablePointer<UInt8>.allocate(capacity: 128)
+        let tag = UnsafeMutablePointer<UInt8>.allocate(capacity: 16)
+        let encrypted = UnsafeMutablePointer<UInt8>.allocate(capacity: data.count + 16)
+        defer {
+            EVP_CIPHER_CTX_reset_wrapper(rsaEncryptCtx)
+            EVP_CIPHER_CTX_free_wrapper(rsaEncryptCtx)
+            aeskey.deallocate()
+            encryptedKey.deallocate()
+            tag.deallocate()
+            encrypted.deallocate()
+        }
+        print(EVP_EncryptInit_ex(rsaEncryptCtx, EVP_aes_128_gcm(), nil, nil, nil))
+        print(EVP_CIPHER_CTX_ctrl(rsaEncryptCtx, EVP_CTRL_GCM_SET_IVLEN, 16, nil))
+        print(EVP_CIPHER_CTX_rand_key(rsaEncryptCtx, aeskey))
+        print(EVP_EncryptInit_ex(rsaEncryptCtx, nil, nil, aeskey, iv))
+        print(RSA_public_encrypt(16, aeskey, encryptedKey, nativeKey, RSA_PKCS1_OAEP_PADDING))
+        var processedLength: Int32 = 0
+        var encLength: Int32 = 0
+
+        let aad = [UInt8](Data(base64Encoded: "MIGJAoGBAKoYq6Q7UN7vOFmPr4fSq2NORXHBMKm8p7h4JnQU+quLRxvYll9cn8OBhIXq9SnCYkbzBVBkqN4ZyMM4vlSWy66wWdwLNYFDtEo1RJ6yZBExIaRVvX/eP6yRnpS1b7m7T2Uc2yPq1DnWzVI+sIGR51s1/ROnQZswkPJHh71PThlnAgMBAAE=")!)
+        print(EVP_EncryptUpdate(rsaEncryptCtx, nil, &processedLength, aad, Int32(aad.count)))
+        
+        // EVP_SealUpdate is a complex macros and therefore the compiler doesnt
+        // convert it directly to swift. From /usr/local/opt/openssl/include/openssl/evp.h:
+        print(data.withUnsafeBytes({ (plaintext: UnsafePointer<UInt8>) -> Int32 in
+            return EVP_EncryptUpdate(rsaEncryptCtx, encrypted, &processedLength, plaintext, Int32(data.count))
+        }))
+        encLength += processedLength
+        print("encLength: \(encLength)")
+        
+        print(EVP_EncryptFinal_ex(rsaEncryptCtx, encrypted.advanced(by: Int(encLength)), &processedLength))
+        encLength += processedLength
+        print(EVP_CIPHER_CTX_ctrl(rsaEncryptCtx, EVP_CTRL_GCM_GET_TAG, 16, tag))
+        let ekFinal = Data(bytes: encryptedKey, count: 128)
+        let cipher = Data(bytes: encrypted, count: Int(encLength))
+        let tagFinal = Data(bytes: tag, count: 16)
+
+        print("ekFinal: \(ekFinal.count), cipher: \(cipher.count), tagFinal: \(tagFinal.count)")
+        return ekFinal + cipher + tagFinal
+    }
 }
